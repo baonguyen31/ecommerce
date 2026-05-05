@@ -4,6 +4,7 @@ SET CHARACTER SET utf8mb4;
 
 -- XÓA DỮ LIỆU CŨ (Để nạp mới hoàn toàn)
 SET FOREIGN_KEY_CHECKS = 0;
+SET SQL_SAFE_UPDATES = 0;
 DELETE FROM cart_items;
 DELETE FROM orders_details;
 DELETE FROM product_variants;
@@ -14,6 +15,7 @@ DELETE FROM categories;
 DELETE FROM customers;
 DELETE FROM employers;
 SET FOREIGN_KEY_CHECKS = 1;
+SET SQL_SAFE_UPDATES = 1;
 
 -- 1. SEED CHO BẢNG CATEGORIES
 INSERT INTO categories (id, name, created_at) VALUES 
