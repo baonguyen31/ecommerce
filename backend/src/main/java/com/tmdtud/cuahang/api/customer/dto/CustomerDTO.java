@@ -12,5 +12,6 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @AllArgsConstructor
 public class CustomerDTO extends UserDTO {
+
     
 }

@@ -52,4 +52,7 @@ public class UserDTO {
     private String ward;
 
     private String street;
+
+    private boolean resetRequested = false;
+
 }

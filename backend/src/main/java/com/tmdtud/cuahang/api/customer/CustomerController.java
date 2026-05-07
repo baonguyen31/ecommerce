@@ -1,10 +1,13 @@
 package com.tmdtud.cuahang.api.customer;
 
+import com.tmdtud.cuahang.api.customer.model.Customers;
+import com.tmdtud.cuahang.api.customer.repository.CustomerRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class CustomerController extends BaseController {
 
     private final CustomerService customerService;
+
 
     // 1. LẤY DANH SÁCH (Sửa lỗi return null)
     @GetMapping
@@ -74,4 +78,25 @@ public class CustomerController extends BaseController {
         customerService.update(dto); // Hàm này sẽ xử lý cả việc đổi Status 1 <-> 0
         return ApiResponse.success("Cập nhật khách hàng thành công!");
     }
+
+
+
+//    @PatchMapping("/forgot-password")
+//    public ResponseEntity<?> resetPassword(@RequestParam String email) {
+//        Customers customer = customerRepository.findByEmail(email);
+//
+//        customer.setResetRequested(true);
+//        customerRepository.save(customer);
+//
+//        return ResponseEntity.ok("Yêu cầu đã được gửi tới Admin. Vui lòng chờ email.");
+//
+//    }
+
+    @PutMapping("/{id}/reset-password")
+        public ResponseEntity<?> resetPassword(@PathVariable Long id) {
+            customerService.handleAdminResetPassword(id);
+
+            return ResponseEntity.ok("Đã reset và gửi mail thành công");
+        }
+
 }

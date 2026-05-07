@@ -1,13 +1,11 @@
 package com.tmdtud.cuahang.api.auth;
 
+import com.tmdtud.cuahang.api.customer.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +16,8 @@ import com.tmdtud.cuahang.api.employer.model.Employers;
 import com.tmdtud.cuahang.common.model.Users;
 import com.tmdtud.cuahang.common.response.ApiResponse;
 
+import java.util.Map;
+
 @RestController
 @Validated
 public class AuthController {
@@ -26,6 +26,10 @@ public class AuthController {
 
     @Autowired
     private AuthService service;
+
+    @Autowired
+    private CustomerRepository customerRepository;
+
 
     @PostMapping("/register/customers")
     public ApiResponse<Customers> registerCustomer(@Validated @RequestBody Customers customer) {
@@ -83,5 +87,25 @@ public class AuthController {
             return ApiResponse.success(data);
         }
         return ApiResponse.error(400, "Không nhận diện được người dùng");
+    }
+
+    @PatchMapping("/forgot-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
+        if (payload == null || !payload.containsKey("email")) {
+            return ResponseEntity.badRequest().body("Dữ liệu không hợp lệ");
+        }
+        
+        String email = payload.get("email");
+
+        Customers customer = customerRepository.findByEmail(email);
+        if (customer == null) {
+            return ResponseEntity.status(404).body("Email không tồn tại");
+        }
+
+        customer.setResetRequested(true);
+        customerRepository.save(customer);
+
+        return ResponseEntity.ok("Yêu cầu đã được gửi tới Admin. Vui lòng chờ email.");
+
     }
 }

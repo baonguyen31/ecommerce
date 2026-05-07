@@ -3,7 +3,10 @@ package com.tmdtud.cuahang.api.customer.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.tmdtud.cuahang.api.customer.dto.CustomerDTO;
@@ -14,6 +17,9 @@ import com.tmdtud.cuahang.common.response.PageResponse;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Random;
 
 @Service
 @Data
@@ -23,6 +29,10 @@ public class CustomerService implements CustomerServiceI {
     private final CustomerRepository customer;
     private final CustomerMapper customerMapper;
     private final BCryptPasswordEncoder passwordEncoder;
+
+    private final JavaMailSender mailSender;
+
+
 
     @Override
     public PageResponse<CustomerDTO> getAll(Pageable pageable) {
@@ -97,4 +107,41 @@ public class CustomerService implements CustomerServiceI {
         // 5. Lưu lại vào DB
         customer.save(existing);
     }
+
+    @Override
+    public String generateRandomPassword() {
+        String chars = "abcdefghijklmnopqrstuvwxyz1234567890";
+        StringBuilder sb= new StringBuilder();
+        Random rnd = new Random();
+        for (int i = 0; i < 6; i++) {
+            sb.append(chars.charAt(rnd.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
+
+    @Override
+    @Transactional
+    public void handleAdminResetPassword(Long customerId) {
+        Customers custoMer = customer.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("ID khách hàng không tồn tại"));
+
+        String rawPassword = generateRandomPassword();
+        custoMer.setPassword(passwordEncoder.encode(rawPassword));
+        custoMer.setResetRequested(false);
+        customer.save(custoMer);
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(custoMer.getEmail());
+        message.setSubject("Mật khẩu của bạn đã được đặt lại");
+        message.setText("Chào " + custoMer.getFullName() + ",\n\n" +
+                "Theo yêu cầu, mật khẩu của bạn đã được reset.\n" +
+                "Mật khẩu mới là: " + rawPassword + "\n\n" +
+                "Vui lòng dùng mật khẩu này để đăng nhập và đổi lại mật khẩu mới.");
+
+        mailSender.send(message);
+
+
+    }
+
+
 }

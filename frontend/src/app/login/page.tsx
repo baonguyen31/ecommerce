@@ -97,16 +97,16 @@ const LoginPage = () => {
 
     try {
       // Gọi API reset password bên Backend (đã hướng dẫn ở bước trước)
-      const res = await fetch("http://localhost:8080/api/auth/reset-password", {
-        method: "POST",
+      const res = await fetch("http://localhost:8080/forgot-password", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
       if (res.ok) {
         showToast(
-          "Mật khẩu mới đã được gửi! Hãy kiểm tra email của bạn.",
-          "success",
+          "Yêu cầu khôi phục đã được gửi tới Quản trị viên!", 
+          "success"
         );
         // Đợi 2 giây rồi quay lại màn hình đăng nhập
         setTimeout(() => {

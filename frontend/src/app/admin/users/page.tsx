@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, CheckCircle2, Lock, ChevronLeft, ChevronRight, X, ArrowLeft, Edit, UserCog, User, Loader2, MapPin, Eye, EyeOff } from "lucide-react";
+import { Plus, Search, CheckCircle2, Lock, ChevronLeft, ChevronRight, X, ArrowLeft, Edit, UserCog, User, Loader2, MapPin, Eye, EyeOff, RotateCw } from "lucide-react";
 
 const USERS_PER_PAGE = 5;
 const API_BASE_URL = "http://localhost:8080";
@@ -20,6 +20,7 @@ interface User {
   dateOfBirth: string;
   salary: number;
   password?: string;
+  resetRequested?: boolean;
 }
 
 export default function AdminUsersPage() {
@@ -98,12 +99,20 @@ export default function AdminUsersPage() {
     setCurrentPage(1);
   };
 
+
+  // Lọc và sắp xếp: user có resetRequested=true lên đầu
   const filteredData = users.filter(user => {
     const matchName = !appliedFilters.name || user.fullName?.toLowerCase().includes(appliedFilters.name.toLowerCase());
     const userEmail = (user.email || user.username || "").toLowerCase();
     const matchAccount = !appliedFilters.account || userEmail.includes(appliedFilters.account.toLowerCase());
     const matchStatus = appliedFilters.status === "all" || user.status === Number(appliedFilters.status);
     return matchName && matchAccount && matchStatus;
+  }).sort((a, b) => {
+    // true lên đầu
+    if ((b.resetRequested ? 1 : 0) - (a.resetRequested ? 1 : 0) !== 0) {
+      return (b.resetRequested ? 1 : 0) - (a.resetRequested ? 1 : 0);
+    }
+    return 0;
   });
 
   const totalPages = Math.ceil(filteredData.length / USERS_PER_PAGE);
@@ -216,6 +225,26 @@ export default function AdminUsersPage() {
       } else {
         const errorData = await response.json();
         showToast(errorData.message || "Không thể cập nhật trạng thái", "error");
+      }
+    } catch { showToast("Lỗi kết nối máy chủ", "error"); }
+  };
+
+  const handleResetPassword = async (user: User) => {
+    const token = sessionStorage.getItem("token");
+    const isStaff = appliedFilters.role === "staff" || appliedFilters.role === "admin";
+    const endpoint = isStaff ? `${API_BASE_URL}/api/employers` : `${API_BASE_URL}/api/customers`;
+
+    try {
+      const response = await fetch(`${endpoint}/${user.id}/reset-password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        showToast("Mật khẩu đã được reset thành công!", "success");
+        fetchUsers();
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.message || "Không thể reset mật khẩu", "error");
       }
     } catch { showToast("Lỗi kết nối máy chủ", "error"); }
   };
@@ -366,13 +395,14 @@ export default function AdminUsersPage() {
                 {(appliedFilters.role === "staff" || appliedFilters.role === "admin") && (
                   <th className="px-4 py-4 text-yellow-300">LƯƠNG</th>
                 )}
+                <th className="px-4 py-4">RESET?</th>
                 <th className="px-4 py-4">TRẠNG THÁI</th>
                 <th className="px-4 py-4">THAO TÁC</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 text-sm">
               {!isLoading && paginatedUsers.map((user, index) => (
-                <tr key={user.id} className="hover:bg-blue-50/50 transition-colors">
+                <tr key={user.id} className={`hover:bg-blue-50/50 transition-colors ${user.resetRequested ? 'bg-yellow-50' : ''}`}>
                   <td className="px-4 py-4 font-medium text-slate-700">{startIndex + index + 1}</td>
                   <td className="px-4 py-4 font-medium text-slate-900">{user.fullName}</td>
                   <td className="px-4 py-4 font-medium text-slate-800">{user.email || user.username}</td>
@@ -381,6 +411,13 @@ export default function AdminUsersPage() {
                   {(appliedFilters.role === "staff" || appliedFilters.role === "admin") && (
                     <td className="px-4 py-4 font-medium text-blue-700">{user.salary?.toLocaleString('vi-VN')} ₫</td>
                   )}
+                  <td className="px-4 py-4 font-medium">
+                    {user.resetRequested ? (
+                      <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded font-medium text-xs border border-yellow-300 inline-flex items-center gap-1">Yêu cầu</span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-2.5 py-1 rounded font-medium text-xs border border-gray-300 inline-flex items-center gap-1">Không</span>
+                    )}
+                  </td>
                   <td className="px-4 py-4">
                     {user.status === 1 ? (
                       <span className="bg-green-50 text-green-800 px-2.5 py-1 rounded font-medium text-xs border border-green-300 inline-flex items-center gap-1"><CheckCircle2 size={12}/> Hoạt động</span>
@@ -390,7 +427,10 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex justify-center gap-2">
-                      <button onClick={() => handleOpenEdit(user)} className="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-100 transition"><Edit size={16}/></button>
+                      <button onClick={() => handleOpenEdit(user)} className="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-100 transition" title="Chỉnh sửa"><Edit size={16}/></button>
+                      {user.resetRequested && (
+                        <button onClick={() => handleResetPassword(user)} className="bg-yellow-50 text-yellow-600 p-2 rounded-lg hover:bg-yellow-100 transition" title="Reset mật khẩu"><RotateCw size={16}/></button>
+                      )}
                       <button onClick={() => toggleStatus(user)} className={`px-3 py-1.5 rounded-lg text-white font-medium text-xs transition ${user.status === 1 ? "bg-red-500 hover:bg-red-600" : "bg-gray-600 hover:bg-gray-700"}`}>{user.status === 1 ? "Khóa" : "Mở khóa"}</button>
                     </div>
                   </td>

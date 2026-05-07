@@ -17,5 +17,7 @@ public interface CustomerServiceI {
     
     void add(CustomerDTO customer);
     void update(CustomerDTO customer);
+    String generateRandomPassword();
+    void handleAdminResetPassword(Long customerId);
 }
 

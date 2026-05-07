@@ -61,6 +61,9 @@ public class Users {
     @Column(name = "date_of_birth")
     private String dateOfBirth;
 
+    @Column(name = "reset_requested", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean resetRequested = false;
+
     // @Column(name = "address")
     // private String address;
 }
