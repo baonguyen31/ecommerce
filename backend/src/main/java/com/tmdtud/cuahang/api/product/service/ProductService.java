@@ -109,7 +109,7 @@ public class ProductService implements ProductServiceI {
     public boolean delete(Long id) {
         Products products = getById(id);
         if (products != null) {
-            productRepo.delete(products);
+            products.setDeleted(1);
             return true;
         }
         return false;
