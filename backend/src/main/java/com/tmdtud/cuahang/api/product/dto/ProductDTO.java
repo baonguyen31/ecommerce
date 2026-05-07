@@ -44,4 +44,6 @@ public class ProductDTO {
     private java.math.BigDecimal rating;
 
     private java.util.List<ProductVariantDTO> variants;
+
+    private int deleted;
 }

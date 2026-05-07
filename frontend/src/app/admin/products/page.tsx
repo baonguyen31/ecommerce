@@ -14,6 +14,7 @@ import {
   Loader2,
   ImageIcon,
   ArrowLeft,
+  RotateCcw,
 } from "lucide-react";
 import Image from "next/image";
 import { apiRequest } from "@/services/app";
@@ -133,6 +134,7 @@ export default function AdminProductsPage() {
       const query = new URLSearchParams(params).toString();
       const response = await apiRequest(`/api/products?${query}`);
       const result = await response.json();
+      // console.log(result.result.content);
       if (result.code === 200 && result.result) {
         setProducts(
           result.result.content.map(
@@ -165,6 +167,7 @@ export default function AdminProductsPage() {
             }),
           ),
         );
+        // console.log(products);
         setTotalProducts(result.result.total);
       }
     } catch {
@@ -241,6 +244,33 @@ export default function AdminProductsPage() {
         }
       } catch {
         showToast("Lỗi khi xóa!", "error");
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleRestore = async (product: any) => {
+    if (window.confirm(`Bạn có chắc muốn khôi phục sản phẩm "${product.name}" không?`)) {
+      setIsLoading(true);
+      try {
+        if(product.status === "hidden") {
+          product.deleted = 0;
+        }
+        product.category_id = Number(product.categoryId);
+        product.brand_id = Number(product.brandId);
+        product.price = product.sellPrice;
+        product.id = Number(product.id);
+
+        // console.log("Payload khôi phục:", product);
+
+        const response = await apiRequest(`/api/products`, "PUT",  product );
+        const result = await response.json();
+        if (result.code === 200) {
+          showToast("Khôi phục thành công", "success");
+          fetchProducts();
+        }
+      } catch {
+        showToast("Lỗi khi khôi phục!", "error");
         setIsLoading(false);
       }
     }
@@ -832,28 +862,41 @@ export default function AdminProductsPage() {
                       <td className="px-4 py-4">
                         {prod.status === "visible" ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-green-800 border border-green-300 bg-green-50 text-xs font-medium">
-                            <CheckCircle2 size={14} /> Hiện
+                            <CheckCircle2 size={14} /> Bình thường
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-600 border border-gray-300 bg-gray-100 text-xs font-medium">
-                            <XCircle size={14} /> Ẩn
+                            <XCircle size={14} /> Đã xóa
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex justify-center items-center gap-2">
-                          <button
-                            onClick={() => handleOpenEdit(prod)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow-sm transition font-medium flex items-center gap-1.5"
-                          >
-                            <Edit size={16} /> Sửa
-                          </button>
-                          <button
-                            onClick={() => handleDelete(prod.id, prod.name)}
-                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded shadow-sm transition font-medium flex items-center gap-1.5"
-                          >
-                            <Trash2 size={16} /> Xóa
-                          </button>
+                          {prod.status === "visible" ? (
+                            // Nếu visible: hiển thị cả Sửa và Xóa
+                            <>
+                              <button
+                                onClick={() => handleOpenEdit(prod)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow-sm transition font-medium flex items-center gap-1.5"
+                              >
+                                <Edit size={16} /> Sửa
+                              </button>
+                              <button
+                                onClick={() => handleDelete(prod.id, prod.name)}
+                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded shadow-sm transition font-medium flex items-center gap-1.5"
+                              >
+                                <Trash2 size={16} /> Xóa
+                              </button>
+                            </>
+                          ) : (
+                            // Nếu hidden: chỉ hiển thị nút Khôi phục (thay thế nút Xóa)
+                            <button
+                              onClick={() => handleRestore(prod)}
+                              className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded shadow-sm transition font-medium flex items-center gap-1.5"
+                            >
+                              <RotateCcw size={16} /> Khôi phục
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

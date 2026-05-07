@@ -110,6 +110,7 @@ public class ProductService implements ProductServiceI {
         Products products = getById(id);
         if (products != null) {
             products.setDeleted(1);
+            productRepo.save(products);
             return true;
         }
         return false;
