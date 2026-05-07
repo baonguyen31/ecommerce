@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  ShieldAlert
+  ShieldAlert,
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -61,11 +61,11 @@ export default function LoginPage() {
         // ----------------------------------
 
         sessionStorage.setItem("token", token);
-        
+
         // Lấy thêm thông tin nhân viên
         try {
           const meRes = await fetch("http://localhost:8080/api/auth/me", {
-            headers: { "Authorization": `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
           if (meRes.ok) {
             const meData = await meRes.json();
@@ -92,6 +92,42 @@ export default function LoginPage() {
       }
     } catch {
       showToast("Lỗi kết nối Server!", "error");
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      showToast("Vui lòng nhập Email trước khi nhấn Quên mật khẩu!", "error");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Bạn có chắc muốn reset mật khẩu của tài khoản ${email} về mặc định không?`,
+      )
+    )
+      return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        "http://localhost:8080/api/auth/reset-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }), // Chỉ gửi email lên để xác định tài khoản
+        },
+      );
+
+      if (response.ok) {
+        showToast("Mật khẩu đã được reset về: 123456", "success");
+      } else {
+        showToast("Email không tồn tại trong hệ thống!", "error");
+      }
+    } catch {
+      showToast("Lỗi kết nối Server!", "error");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -157,9 +193,18 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
-                Mật khẩu
-              </label>
+              <div className="flex justify-between items-center mb-2 ml-1">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  Mật khẩu
+                </label>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest transition-colors outline-none"
+                >
+                  Quên mật khẩu?
+                </button>
+              </div>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                   <Lock size={20} />
@@ -196,5 +241,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-
