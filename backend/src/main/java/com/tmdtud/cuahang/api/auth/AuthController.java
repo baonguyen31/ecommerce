@@ -30,14 +30,13 @@ public class AuthController {
     @Autowired
     private CustomerRepository customerRepository;
 
-
     @PostMapping("/register/customers")
     public ApiResponse<Customers> registerCustomer(@Validated @RequestBody Customers customer) {
         return ApiResponse.success(service.registerCustomer(customer));
     }
 
     @PostMapping("/register/employers")
-    public ApiResponse<Employers> registerEmployer(@Validated @RequestBody Employers employer){
+    public ApiResponse<Employers> registerEmployer(@Validated @RequestBody Employers employer) {
         return ApiResponse.success(service.registerEmployer(employer));
     }
 
@@ -52,13 +51,15 @@ public class AuthController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(java.util.Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(java.util.Map.of("message", "Đã xảy ra lỗi hệ thống!"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("message", "Đã xảy ra lỗi hệ thống!"));
         }
     }
 
     @GetMapping("/api/auth/me")
     public ApiResponse<?> getCurrentUser(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
             return ApiResponse.error(401, "Chưa đăng nhập");
         }
         Object principal = authentication.getPrincipal();
@@ -94,7 +95,7 @@ public class AuthController {
         if (payload == null || !payload.containsKey("email")) {
             return ResponseEntity.badRequest().body("Dữ liệu không hợp lệ");
         }
-        
+
         String email = payload.get("email");
 
         Customers customer = customerRepository.findByEmail(email);
