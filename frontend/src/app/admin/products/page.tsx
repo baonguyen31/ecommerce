@@ -250,10 +250,14 @@ export default function AdminProductsPage() {
   };
 
   const handleRestore = async (product: any) => {
-    if (window.confirm(`Bạn có chắc muốn khôi phục sản phẩm "${product.name}" không?`)) {
+    if (
+      window.confirm(
+        `Bạn có chắc muốn khôi phục sản phẩm "${product.name}" không?`,
+      )
+    ) {
       setIsLoading(true);
       try {
-        if(product.status === "hidden") {
+        if (product.status === "hidden") {
           product.deleted = 0;
         }
         product.category_id = Number(product.categoryId);
@@ -263,7 +267,7 @@ export default function AdminProductsPage() {
 
         // console.log("Payload khôi phục:", product);
 
-        const response = await apiRequest(`/api/products`, "PUT",  product );
+        const response = await apiRequest(`/api/products`, "PUT", product);
         const result = await response.json();
         if (result.code === 200) {
           showToast("Khôi phục thành công", "success");
@@ -454,7 +458,7 @@ export default function AdminProductsPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-5">
-                      <div>
+                      {/* <div>
                         <label className="block text-sm font-semibold text-gray-800 mb-2">
                           Trạng thái <span className="text-red-500">*</span>
                         </label>
@@ -472,7 +476,7 @@ export default function AdminProductsPage() {
                           <option value="visible">Hiển thị</option>
                           <option value="hidden">Ẩn</option>
                         </select>
-                      </div>
+                      </div> */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-800 mb-2">
                           Mô tả sản phẩm

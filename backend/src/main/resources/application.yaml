@@ -3,7 +3,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/cuahang_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
     username: "root"
-    password: "tribao123"
+    password: ""
   jpa:
     hibernate:
       ddl-auto: update
@@ -12,18 +12,17 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
   mail:
-      host: smtp.gmail.com
-      port: 587
-      username: "nguyenchibao310503@gmail.com"
-      password: "odpc eels fzcb toel" # Mã 16 ký tự lấy từ Google App Password
-      properties:
-        mail:
-          smtp:
-            auth: true
-            starttls:
-              enable: true
-      default-encoding: UTF-8
-
+    host: smtp.gmail.com
+    port: 587
+    username: "nguyenchibao310503@gmail.com"
+    password: "odpc eels fzcb toel" # Mã 16 ký tự lấy từ Google App Password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    default-encoding: UTF-8
 
 app:
   jwt:
@@ -39,5 +38,3 @@ logging:
           jdbc:
             connections:
               internal: DEBUG
-
-
