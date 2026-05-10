@@ -14,6 +14,7 @@ const PRODUCTS_PER_PAGE = 8;
 function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || ""; 
+  const isPromo = searchParams.get('promo') === 'true';
 
   // States
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,10 +48,10 @@ function SearchContent() {
     fetchBrands();
   }, []);
 
-  // Reset page when query changes
+  // Reset page when query or promo changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [query]);
+  }, [query, isPromo]);
 
   const fetchSearchResults = useCallback(async () => {
     setIsLoading(true);
@@ -67,6 +68,7 @@ function SearchContent() {
       if (minPrice) params.min_price = minPrice;
       if (maxPrice) params.max_price = maxPrice;
       if (selectedColor) params.color = selectedColor;
+      if (isPromo) params.hasDiscount = 'true';
 
       const queryParams = new URLSearchParams(params).toString();
 
@@ -92,9 +94,9 @@ function SearchContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, query, selectedBrand, minPrice, maxPrice, selectedColor, sortBy, sortDir]);
+  }, [currentPage, query, isPromo, selectedBrand, minPrice, maxPrice, selectedColor, sortBy, sortDir]);
 
-  // Fetch when page, query or filters change
+  // Fetch when page, query, promo or filters change
   useEffect(() => {
     fetchSearchResults();
   }, [fetchSearchResults]);
@@ -115,7 +117,7 @@ function SearchContent() {
       <div className="mb-8 border-b border-gray-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-medium text-gray-800 uppercase tracking-widest">
-            {query ? `Kết quả tìm kiếm cho "${query}"` : "Tất cả sản phẩm"}
+            {isPromo ? "Sản phẩm khuyến mãi" : query ? `Kết quả tìm kiếm cho "${query}"` : "Tất cả sản phẩm"}
           </h1>
           <p className="text-gray-500 mt-2">
             Tìm thấy <strong>{totalProducts}</strong> sản phẩm phù hợp.

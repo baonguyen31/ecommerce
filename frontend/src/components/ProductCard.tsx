@@ -12,6 +12,9 @@ export default function ProductCard({ product }: ProductCardProps) {
     return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
   };
 
+  const discount = product.discountPercentage || 0;
+  const discountedPrice = product.price * (1 - discount / 100);
+
   return (
     <div className="group flex flex-col h-full cursor-pointer">
       {/* Khối hình ảnh */}
@@ -23,6 +26,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
           className="object-cover group-hover:scale-105 transition duration-500"
         />
+        {discount > 0 && (
+          <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded">
+            -{discount}%
+          </div>
+        )}
       </Link>
       
       {/* Khối thông tin (Canh giữa) */}
@@ -35,9 +43,22 @@ export default function ProductCard({ product }: ProductCardProps) {
         </Link>
         
         {/* Giá tiền - In đậm */}
-        <span className="text-base font-bold text-black mb-3">
-          {formatPrice(product.price)}
-        </span>
+        <div className="flex flex-col items-center mb-3">
+          {discount > 0 ? (
+            <>
+              <span className="text-base font-bold text-red-600">
+                {formatPrice(discountedPrice)}
+              </span>
+              <span className="text-xs text-gray-400 line-through">
+                {formatPrice(product.price)}
+              </span>
+            </>
+          ) : (
+            <span className="text-base font-bold text-black">
+              {formatPrice(product.price)}
+            </span>
+          )}
+        </div>
         
         {/* Các chấm màu sắc */}
         {product.colors && product.colors.length > 0 && (

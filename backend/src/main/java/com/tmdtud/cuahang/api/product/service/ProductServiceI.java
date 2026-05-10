@@ -12,9 +12,12 @@ import com.tmdtud.cuahang.common.response.PageResponse;
 import java.math.BigDecimal;
 
 public interface ProductServiceI {
-    public PageResponse<Products> getAll(String name, Long categoryId, Long brandId, BigDecimal minPrice, BigDecimal maxPrice, String color, Pageable pageable);
+    public PageResponse<Products> getAll(String name, Long categoryId, Long brandId, BigDecimal minPrice, BigDecimal maxPrice, String color, Boolean hasDiscount, Pageable pageable);
+
     public PageResponse<Products> getAll(Pageable pageable);
-    public PageResponse<Products> getBestSellers(String name, Long categoryId, Long brandId, BigDecimal minPrice, BigDecimal maxPrice, String color, Pageable pageable);
+
+    public PageResponse<Products> getBestSellers(String name, Long categoryId, Long brandId, BigDecimal minPrice, BigDecimal maxPrice, String color, Boolean hasDiscount, Pageable pageable);
+
 
     public Products getById(Long id);
 
@@ -23,6 +26,8 @@ public interface ProductServiceI {
     public Products add(ProductStoreRequest request);
 
     public Products update(ProductUpdateRequest request);
+
+    public Products update(Products product);
 
     public int setCategoryAndBrandDefaultByCategory(Long categoryId);
 

@@ -6,6 +6,8 @@ export interface CartItem {
   productId: number;
   name: string;
   price: number;
+  originalPrice?: number;
+  discountPercentage?: number;
   quantity: number;
   image: string;
   category: string;
@@ -25,21 +27,37 @@ export const getCart = async (): Promise<CartItem[]> => {
     if (data.code === 200 && Array.isArray(data.result)) {
       return data.result.map((item: { 
         id: number, 
-        product: { id: number, name: string, price: number, imageUrl?: string, image?: string, category?: { name: string } }, 
+        product: { 
+          id: number, 
+          name: string, 
+          price: number, 
+          discountPercentage?: number,
+          imageUrl?: string, 
+          image?: string, 
+          category?: { name: string } 
+        }, 
         quantity: number, 
         size?: string, 
         color?: string 
-      }) => ({
-        id: item.id,
-        productId: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
-        quantity: item.quantity,
-        image: item.product.imageUrl || item.product.image || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=400",
-        category: item.product.category?.name || "Giày",
-        size: item.size,
-        color: item.color
-      }));
+      }) => {
+        const basePrice = item.product.price;
+        const discount = item.product.discountPercentage || 0;
+        const discountedPrice = basePrice * (1 - discount / 100);
+        
+        return {
+          id: item.id,
+          productId: item.product.id,
+          name: item.product.name,
+          price: discountedPrice,
+          originalPrice: basePrice,
+          discountPercentage: discount,
+          quantity: item.quantity,
+          image: item.product.imageUrl || item.product.image || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=400",
+          category: item.product.category?.name || "Giày",
+          size: item.size,
+          color: item.color
+        };
+      });
     }
     return [];
   } catch (error) {

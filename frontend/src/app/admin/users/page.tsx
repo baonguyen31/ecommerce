@@ -10,7 +10,6 @@ import {
   ChevronRight,
   X,
   ArrowLeft,
-  Edit,
   UserCog,
   User,
   Loader2,
@@ -808,7 +807,13 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex justify-center gap-2">
-                        {/* <button onClick={() => handleOpenEdit(user)} className="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-100 transition" title="Chỉnh sửa"><Edit size={16}/></button> */}
+                        <button
+                          onClick={() => handleOpenEdit(user)}
+                          className="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-100 transition"
+                          title="Chỉnh sửa"
+                        >
+                          <UserCog size={16} />
+                        </button>
                         {user.resetRequested && (
                           <button
                             onClick={() => handleResetPassword(user)}

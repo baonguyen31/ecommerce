@@ -79,7 +79,7 @@ const LoginPage = () => {
         showToast("Email hoặc mật khẩu không chính xác!", "error");
         setIsLoading(false);
       }
-    } catch (error) {
+    } catch {
       showToast("Lỗi kết nối máy chủ 8080!", "error");
       setIsLoading(false);
     }
@@ -117,7 +117,7 @@ const LoginPage = () => {
         showToast("Email không tồn tại trong hệ thống!", "error");
         setIsLoading(false);
       }
-    } catch (error) {
+    } catch {
       showToast("Lỗi kết nối server!", "error");
       setIsLoading(false);
     }

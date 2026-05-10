@@ -34,7 +34,7 @@ public class ProductService implements ProductServiceI {
     private final CategoryService categoryService;
 
     @Override
-    public PageResponse<Products> getAll(String name, Long categoryId, Long brandId, BigDecimal minPrice, BigDecimal maxPrice, String color, Pageable pageable) {
+    public PageResponse<Products> getAll(String name, Long categoryId, Long brandId, BigDecimal minPrice, BigDecimal maxPrice, String color, Boolean hasDiscount, Pageable pageable) {
         org.springframework.data.domain.Page<Products> products = productRepo.findProductsWithFilters(
             name != null && !name.isEmpty() ? name : null, 
             categoryId, 
@@ -42,6 +42,7 @@ public class ProductService implements ProductServiceI {
             minPrice, 
             maxPrice, 
             color,
+            hasDiscount,
             pageable
         );
         return new PageResponse<Products>(products);
@@ -54,7 +55,7 @@ public class ProductService implements ProductServiceI {
     }
 
     @Override
-    public PageResponse<Products> getBestSellers(String name, Long categoryId, Long brandId, BigDecimal minPrice, BigDecimal maxPrice, String color, Pageable pageable) {
+    public PageResponse<Products> getBestSellers(String name, Long categoryId, Long brandId, BigDecimal minPrice, BigDecimal maxPrice, String color, Boolean hasDiscount, Pageable pageable) {
         org.springframework.data.domain.Page<Products> products = productRepo.findBestSellersWithFilters(
             name != null && !name.isEmpty() ? name : null, 
             categoryId, 
@@ -62,6 +63,7 @@ public class ProductService implements ProductServiceI {
             minPrice, 
             maxPrice, 
             color,
+            hasDiscount,
             pageable
         );
         return new PageResponse<Products>(products);
@@ -71,6 +73,13 @@ public class ProductService implements ProductServiceI {
     public Products add(ProductStoreRequest request) {
         Brands brand = brandService.getById(request.getBrand_id());
         Categories category = categoryService.getById(request.getCategory_id());
+
+        // Validate discount percentage
+        if (request.getDiscountPercentage() != null && 
+            (request.getDiscountPercentage().compareTo(BigDecimal.ZERO) < 0 || 
+             request.getDiscountPercentage().compareTo(new BigDecimal(100)) > 0)) {
+            throw new RuntimeException("Giảm giá không được vượt quá 100% hoặc nhỏ hơn 0%");
+        }
 
         int totalQuantity = request.getQuantity();
         if (request.getVariants() != null && !request.getVariants().isEmpty()) {
@@ -127,6 +136,13 @@ public class ProductService implements ProductServiceI {
         Brands brand = brandService.getById(request.getBrand_id());
         Categories category = categoryService.getById(request.getCategory_id());
 
+        // Validate discount percentage
+        if (request.getDiscountPercentage() != null && 
+            (request.getDiscountPercentage().compareTo(BigDecimal.ZERO) < 0 || 
+             request.getDiscountPercentage().compareTo(new BigDecimal(100)) > 0)) {
+            throw new RuntimeException("Giảm giá không được vượt quá 100% hoặc nhỏ hơn 0%");
+        }
+
         int totalQuantity = request.getQuantity();
         if (request.getVariants() != null && !request.getVariants().isEmpty()) {
             totalQuantity = request.getVariants().stream().mapToInt(v -> v.getQuantity()).sum();
@@ -164,6 +180,11 @@ public class ProductService implements ProductServiceI {
         }
 
         return savedProduct;
+    }
+
+    @Override
+    public Products update(Products product) {
+        return productRepo.save(product);
     }
 
     @Override

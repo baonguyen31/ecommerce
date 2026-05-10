@@ -45,7 +45,8 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
            "(:brandId IS NULL OR p.brand.id = :brandId) AND " +
            "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
            "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
-           "(:color IS NULL OR LOWER(v.color) LIKE LOWER(CONCAT('%', :color, '%')))")
+           "(:color IS NULL OR LOWER(v.color) LIKE LOWER(CONCAT('%', :color, '%'))) AND " +
+           "(:hasDiscount IS NULL OR (:hasDiscount = true AND COALESCE(p.discountPercentage, 0) > 0) OR (:hasDiscount = false AND COALESCE(p.discountPercentage, 0) = 0))")
     org.springframework.data.domain.Page<Products> findProductsWithFilters(
         @Param("name") String name, 
         @Param("categoryId") Long categoryId, 
@@ -53,6 +54,7 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
         @Param("minPrice") BigDecimal minPrice, 
         @Param("maxPrice") BigDecimal maxPrice, 
         @Param("color") String color,
+        @Param("hasDiscount") Boolean hasDiscount,
         org.springframework.data.domain.Pageable pageable);
 
     @EntityGraph(attributePaths = { "category", "brand", "variants" })
@@ -66,7 +68,8 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
             "JOIN OrdersDetails od ON p.id = od.product.id " +
             "WHERE (:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
             "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
-            "(:brandId IS NULL OR p.brand.id = :brandId) " +
+            "(:brandId IS NULL OR p.brand.id = :brandId) AND " +
+            "(:hasDiscount IS NULL OR (:hasDiscount = true AND COALESCE(p.discountPercentage, 0) > 0) OR (:hasDiscount = false AND COALESCE(p.discountPercentage, 0) = 0)) " +
             "GROUP BY p.id, p.name, p.price, p.quantity, p.description, p.imageUrl, " +
             "p.discountPercentage, p.rating, p.deleted, p.category.id, p.brand.id " +
             "ORDER BY SUM(od.quantity) DESC")
@@ -77,6 +80,7 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
         @Param("minPrice") BigDecimal minPrice, 
         @Param("maxPrice") BigDecimal maxPrice, 
         @Param("color") String color,
+        @Param("hasDiscount") Boolean hasDiscount,
         Pageable pageable);
 
     @Modifying

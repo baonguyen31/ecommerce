@@ -50,13 +50,14 @@ public class ProductController extends BaseController {
             @RequestParam(required = false) Long brand_id,
             @RequestParam(required = false) BigDecimal min_price,
             @RequestParam(required = false) BigDecimal max_price,
-            @RequestParam(required = false) String color) {
+            @RequestParam(required = false) String color,
+            @RequestParam(required = false) Boolean hasDiscount) {
         Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
         
-        PageResponse<Products> pageResponse = productSer.getAll(name, category_id, brand_id, min_price, max_price, color, pageable);
+        PageResponse<Products> pageResponse = productSer.getAll(name, category_id, brand_id, min_price, max_price, color, hasDiscount, pageable);
         List<ProductDTO> productDTOs = pageResponse.getContent()
                                         .stream()
                                         .map(item -> productMapper.toDTO(item))
@@ -79,10 +80,11 @@ public class ProductController extends BaseController {
             @RequestParam(required = false) Long brand_id,
             @RequestParam(required = false) BigDecimal min_price,
             @RequestParam(required = false) BigDecimal max_price,
-            @RequestParam(required = false) String color) {
+            @RequestParam(required = false) String color,
+            @RequestParam(required = false) Boolean hasDiscount) {
         Pageable pageable = PageRequest.of(page, size);
         
-        PageResponse<Products> pageResponse = productSer.getBestSellers(name, category_id, brand_id, min_price, max_price, color, pageable);
+        PageResponse<Products> pageResponse = productSer.getBestSellers(name, category_id, brand_id, min_price, max_price, color, hasDiscount, pageable);
         List<ProductDTO> productDTOs = pageResponse.getContent()
                                         .stream()
                                         .map(item -> productMapper.toDTO(item))

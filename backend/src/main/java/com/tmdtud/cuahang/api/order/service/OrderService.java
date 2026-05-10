@@ -109,6 +109,33 @@ public class OrderService implements OrderServiceI {
         Orders newOrder = orderRepository.save(order);
         orderDetailService.addAll(request.getDetails(), newOrder.getId()); 
         
+        // Trừ số lượng tồn kho ngay khi tạo đơn hàng (Trạng thái CHỜ XÁC NHẬN)
+        List<OrdersDetails> details = orderDetailService.getByOrderId(newOrder.getId());
+        for (OrdersDetails item : details) {
+            Products pro = item.getProduct();
+            
+            // Cập nhật số lượng biến thể
+            java.util.Optional<com.tmdtud.cuahang.api.product.model.ProductVariant> variantOpt = 
+                variantRepo.findByProductAndColorAndSize(pro, item.getColor(), item.getSize());
+            
+            if (variantOpt.isPresent()) {
+                com.tmdtud.cuahang.api.product.model.ProductVariant variant = variantOpt.get();
+                if (variant.getQuantity() < item.getQuantity()) {
+                    throw new RuntimeException("Biến thể " + item.getColor() + " size " + item.getSize() + 
+                        " của sản phẩm " + pro.getName() + " không đủ số lượng tồn kho!");
+                }
+                variant.setQuantity(variant.getQuantity() - item.getQuantity());
+                variantRepo.save(variant);
+            }
+            
+            // Cập nhật tổng số lượng sản phẩm
+            if (pro.getQuantity() < item.getQuantity()) {
+                throw new RuntimeException("Sản phẩm " + pro.getName() + " không đủ số lượng tồn kho!");
+            }
+            pro.setQuantity(pro.getQuantity() - item.getQuantity());
+            productService.update(pro);
+        }
+
         return newOrder;
     }
 
@@ -121,31 +148,26 @@ public class OrderService implements OrderServiceI {
         if (!order.getStatus().isCancellable())
             throw new RuntimeException("Chỉ có thể hủy đơn hàng ở trạng thái Chờ xác nhận hoặc Đã xác nhận");
 
-        if (!order.getStatus().equals(OrderStatus.PENDING)) {
-            List<OrdersDetails> ordersDetails = orderDetailService
-                    .getByOrderId(order.getId());
-            List<Products> products = new ArrayList<>();
-
-            for (OrdersDetails item : ordersDetails) {
-                Products pro = item.getProduct();
-                
-                // Restore variant quantity
-                java.util.Optional<com.tmdtud.cuahang.api.product.model.ProductVariant> variantOpt = variantRepo.findByProductAndColorAndSize(pro, item.getColor(), item.getSize());
-                if (variantOpt.isPresent()) {
-                    com.tmdtud.cuahang.api.product.model.ProductVariant variant = variantOpt.get();
-                    variant.setQuantity(variant.getQuantity() + item.getQuantity());
-                    variantRepo.save(variant);
-                }
-
-                pro.setQuantity(pro.getQuantity() + item.getQuantity());
-                products.add(pro);
+        // Hoàn lại số lượng tồn kho khi hủy đơn hàng
+        List<OrdersDetails> ordersDetails = orderDetailService.getByOrderId(order.getId());
+        for (OrdersDetails item : ordersDetails) {
+            Products pro = item.getProduct();
+            
+            // Hoàn lại số lượng biến thể
+            java.util.Optional<com.tmdtud.cuahang.api.product.model.ProductVariant> variantOpt = 
+                variantRepo.findByProductAndColorAndSize(pro, item.getColor(), item.getSize());
+            if (variantOpt.isPresent()) {
+                com.tmdtud.cuahang.api.product.model.ProductVariant variant = variantOpt.get();
+                variant.setQuantity(variant.getQuantity() + item.getQuantity());
+                variantRepo.save(variant);
             }
 
-            productService.updateAll(products);
+            // Hoàn lại tổng số lượng sản phẩm
+            pro.setQuantity(pro.getQuantity() + item.getQuantity());
+            productService.update(pro);
         }
 
         order.setStatus(OrderStatus.CANCELLED);
-
         orderRepository.save(order);
         return order;
     }
@@ -201,38 +223,8 @@ public class OrderService implements OrderServiceI {
         order.setStatus(request.getOrderStatusNext());
         orderRepository.save(order);
 
-        if (request.getOrderStatusNext().equals(OrderStatus.CONFIRMED)) {
-            List<OrdersDetails> ordersDetails = orderDetailService
-                    .getByOrderId(request.getOrderId());
-            List<Products> products = new ArrayList<>();
-
-            for (OrdersDetails item : ordersDetails) {
-                Products pro = item.getProduct();
-                
-                // Try to find the specific variant
-                java.util.Optional<com.tmdtud.cuahang.api.product.model.ProductVariant> variantOpt = variantRepo.findByProductAndColorAndSize(pro, item.getColor(), item.getSize());
-                
-                if (variantOpt.isPresent()) {
-                    com.tmdtud.cuahang.api.product.model.ProductVariant variant = variantOpt.get();
-                    if (variant.getQuantity() < item.getQuantity()) {
-                        throw new RuntimeException("Biến thể " + item.getColor() + " size " + item.getSize() + " của sản phẩm " + pro.getName() + " không đủ số lượng tồn kho!");
-                    }
-                    variant.setQuantity(variant.getQuantity() - item.getQuantity());
-                    variantRepo.save(variant);
-                } else {
-                    // Fallback to global quantity if no variant found
-                    if (pro.getQuantity() < item.getQuantity()) {
-                        throw new RuntimeException("Sản phẩm " + pro.getName() + " không đủ số lượng tồn kho!");
-                    }
-                }
-                
-                pro.setQuantity(pro.getQuantity() - item.getQuantity());
-                products.add(pro);
-            }
-
-            productService.updateAll(products);
-        }
-
+        // Đã trừ tồn kho ở add(), không trừ lại ở CONFIRMED nữa
+        
         return order;
     }
 

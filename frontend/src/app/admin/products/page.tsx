@@ -249,7 +249,7 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleRestore = async (product: any) => {
+  const handleRestore = async (product: Product) => {
     if (
       window.confirm(
         `Bạn có chắc muốn khôi phục sản phẩm "${product.name}" không?`,
@@ -257,17 +257,21 @@ export default function AdminProductsPage() {
     ) {
       setIsLoading(true);
       try {
-        if (product.status === "hidden") {
-          product.deleted = 0;
-        }
-        product.category_id = Number(product.categoryId);
-        product.brand_id = Number(product.brandId);
-        product.price = product.sellPrice;
-        product.id = Number(product.id);
+        const payload = {
+          id: Number(product.id),
+          name: product.name,
+          price: product.sellPrice,
+          description: product.description,
+          imageUrl: product.image,
+          quantity: product.variants.reduce((acc, v) => acc + v.quantity, 0) || 0,
+          brand_id: Number(product.brandId),
+          category_id: Number(product.categoryId),
+          deleted: 0, // Khôi phục nên deleted = 0
+          discountPercentage: product.discountPercentage,
+          variants: product.variants,
+        };
 
-        // console.log("Payload khôi phục:", product);
-
-        const response = await apiRequest(`/api/products`, "PUT", product);
+        const response = await apiRequest(`/api/products`, "PUT", payload);
         const result = await response.json();
         if (result.code === 200) {
           showToast("Khôi phục thành công", "success");

@@ -180,7 +180,7 @@ export default async function Home() {
           </div>
 
           <div className="text-center mt-12">
-            <Link href="/search?q=" className="inline-block border border-red-600 text-red-600 px-10 py-3 font-medium hover:bg-red-600 hover:text-white transition uppercase text-sm tracking-wide rounded">
+            <Link href="/search?promo=true" className="inline-block border border-red-600 text-red-600 px-10 py-3 font-medium hover:bg-red-600 hover:text-white transition uppercase text-sm tracking-wide rounded">
               Xem tất cả khuyến mãi
             </Link>
           </div>

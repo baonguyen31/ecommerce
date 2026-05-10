@@ -29,12 +29,18 @@ const Cart = () => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('momo'); 
   const [shippingMethod, setShippingMethod] = useState('standard'); 
+  const [addressType, setAddressType] = useState<'profile' | 'new'>('profile');
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerStreet, setCustomerStreet] = useState('');
   const [customerWard, setCustomerWard] = useState('');
   const [customerCity, setCustomerCity] = useState('');
+  
+  const [profileInfo, setProfileInfo] = useState({
+    name: '', phone: '', street: '', ward: '', city: ''
+  });
+
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const [showMomoModal, setShowMomoModal] = useState(false);
@@ -52,11 +58,22 @@ const Cart = () => {
             const res = await apiRequest("/api/auth/me", "GET");
             const data = await res.json();
             if (data.code === 200 && data.result) {
-              setCustomerName(data.result.fullName || '');
-              setCustomerPhone(data.result.phone || '');
-              setCustomerStreet(data.result.street || '');
-              setCustomerWard(data.result.ward || '');
-              setCustomerCity(data.result.city || '');
+              const info = {
+                name: data.result.fullName || '',
+                phone: data.result.phone || '',
+                street: data.result.street || '',
+                ward: data.result.ward || '',
+                city: data.result.city || ''
+              };
+              setProfileInfo(info);
+              
+              if (addressType === 'profile') {
+                setCustomerName(info.name);
+                setCustomerPhone(info.phone);
+                setCustomerStreet(info.street);
+                setCustomerWard(info.ward);
+                setCustomerCity(info.city);
+              }
               setIsUserInfoLoaded(true);
             }
           } catch (e) {
@@ -79,7 +96,24 @@ const Cart = () => {
 
     window.addEventListener("authUpdated", handleAuthUpdate);
     return () => window.removeEventListener("authUpdated", handleAuthUpdate);
-  }, [showCheckoutModal, isUserInfoLoaded]);
+  }, [showCheckoutModal, isUserInfoLoaded, addressType]);
+
+  const handleAddressTypeChange = (type: 'profile' | 'new') => {
+    setAddressType(type);
+    if (type === 'profile') {
+      setCustomerName(profileInfo.name);
+      setCustomerPhone(profileInfo.phone);
+      setCustomerStreet(profileInfo.street);
+      setCustomerWard(profileInfo.ward);
+      setCustomerCity(profileInfo.city);
+    } else {
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerStreet('');
+      setCustomerWard('');
+      setCustomerCity('');
+    }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -91,7 +125,7 @@ const Cart = () => {
           if (res.code === 200 && res.result && res.result.order.paymentStatus === 'PAID') {
             clearInterval(interval);
             alert("Thanh toán MOMO thành công!");
-            await clearCart();
+            // Đã xóa cart ở handlePlaceOrder, không cần xóa lại
             setShowMomoModal(false);
             setShowCheckoutModal(false);
             window.location.href = "/orders";
@@ -117,7 +151,7 @@ const Cart = () => {
   };
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shippingFee = items.length > 0 ? (shippingMethod === 'express' ? subtotal * 0.05 : 50000) : 0;
+  const shippingFee = items.length > 0 ? (shippingMethod === 'express' ? 60000 : 30000) : 0;
   const total = subtotal + shippingFee;
   const formatPrice = (p: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
@@ -159,6 +193,9 @@ const Cart = () => {
         const orderId = res.result.order.id;
         console.log("Order created successfully, ID:", orderId);
 
+        // Clear cart immediately after successful order creation
+        await clearCart();
+
         if (!customerId) {
           const guestOrders = JSON.parse(localStorage.getItem("guest_order_ids") || "[]");
           guestOrders.push(orderId);
@@ -179,14 +216,18 @@ const Cart = () => {
               setShowMomoModal(true);
             } else {
               alert("Lỗi từ MoMo: " + (qrData.message || "Không có URL thanh toán"));
+              // Vẫn chuyển hướng đến trang đơn hàng vì order đã tạo thành công
+              setShowCheckoutModal(false);
+              window.location.href = "/orders";
             }
           } catch (e) {
             console.error("MoMo payment error:", e);
-            alert("Không thể tạo liên kết thanh toán MoMo, vui lòng thử lại!");
+            alert("Không thể tạo liên kết thanh toán MoMo, vui lòng thanh toán lại trong lịch sử đơn hàng!");
+            setShowCheckoutModal(false);
+            window.location.href = "/orders";
           }
         } else {
           alert(`Đặt hàng thành công! Mã đơn hàng: #${orderId}`);
-          await clearCart();
           setShowCheckoutModal(false);
           window.location.href = "/orders";
         }
@@ -237,6 +278,11 @@ const Cart = () => {
                     fill 
                     className="object-contain p-2 transition-transform duration-500 group-hover:scale-110" 
                   />
+                  {item.discountPercentage && item.discountPercentage > 0 ? (
+                    <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg">
+                      -{item.discountPercentage}%
+                    </div>
+                  ) : null}
                 </div>
                 <div className="sm:ml-8 flex-grow text-center sm:text-left mt-4 sm:mt-0">
                   <p className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.15em] mb-1">{item.category}</p>
@@ -251,7 +297,12 @@ const Cart = () => {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs text-gray-400 font-bold uppercase">Đơn giá</span>
-                    <p className="text-lg font-bold text-gray-900">{formatPrice(item.price)}</p>
+                    <div className="flex items-center gap-2 justify-center sm:justify-start">
+                      <p className="text-lg font-bold text-gray-900">{formatPrice(item.price)}</p>
+                      {item.originalPrice && item.originalPrice > item.price && (
+                        <p className="text-xs text-gray-400 line-through">{formatPrice(item.originalPrice)}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center bg-white rounded-2xl px-3 py-2 my-4 sm:my-0 sm:mx-6 shadow-sm border border-gray-100">
@@ -325,35 +376,101 @@ const Cart = () => {
             <button onClick={() => setShowCheckoutModal(false)} className="absolute top-4 right-4 lg:right-6 lg:top-6 z-10 p-2 bg-gray-100/80 hover:bg-gray-200 text-gray-600 rounded-full transition-colors backdrop-blur-sm"><X size={24} /></button>
             <div className="w-full lg:w-3/5 p-6 sm:p-10 overflow-y-auto border-r border-gray-100 hide-scrollbar">
               <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-wide mb-8">Thông tin thanh toán</h2>
+              
+              <div className="mb-8">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Địa chỉ giao hàng</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div 
+                    onClick={() => handleAddressTypeChange('profile')} 
+                    className={`border-2 rounded-2xl p-4 cursor-pointer transition-all flex items-center gap-3 ${addressType === 'profile' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${addressType === 'profile' ? 'border-blue-600' : 'border-gray-300'}`}>
+                      {addressType === 'profile' && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
+                    </div>
+                    <div>
+                      <p className={`font-bold text-sm ${addressType === 'profile' ? 'text-gray-900' : 'text-gray-600'}`}>Địa chỉ từ tài khoản</p>
+                      {profileInfo.street && <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{profileInfo.street}, {profileInfo.ward}, {profileInfo.city}</p>}
+                    </div>
+                  </div>
+                  <div 
+                    onClick={() => handleAddressTypeChange('new')} 
+                    className={`border-2 rounded-2xl p-4 cursor-pointer transition-all flex items-center gap-3 ${addressType === 'new' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${addressType === 'new' ? 'border-blue-600' : 'border-gray-300'}`}>
+                      {addressType === 'new' && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}
+                    </div>
+                    <div>
+                      <p className={`font-bold text-sm ${addressType === 'new' ? 'text-gray-900' : 'text-gray-600'}`}>Nhập địa chỉ mới</p>
+                      <p className="text-[10px] text-gray-500 mt-1">Giao hàng đến địa chỉ khác</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4 mb-10">
                 <div className="relative">
                   <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input value={customerName} onChange={e => setCustomerName(e.target.value)} type="text" placeholder="Họ và tên người nhận" className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 pl-12 pr-4 outline-none transition-all font-medium text-gray-900" />
+                  <input 
+                    value={customerName} 
+                    onChange={e => setCustomerName(e.target.value)} 
+                    type="text" 
+                    placeholder="Họ và tên người nhận" 
+                    disabled={addressType === 'profile' && profileInfo.name !== ''}
+                    className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 pl-12 pr-4 outline-none transition-all font-medium text-gray-900 disabled:opacity-70" 
+                  />
                 </div>
                 <div className="relative">
                   <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} type="tel" placeholder="Số điện thoại di động" className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 pl-12 pr-4 outline-none transition-all font-medium text-gray-900" />
+                  <input 
+                    value={customerPhone} 
+                    onChange={e => setCustomerPhone(e.target.value)} 
+                    type="tel" 
+                    placeholder="Số điện thoại di động" 
+                    disabled={addressType === 'profile' && profileInfo.phone !== ''}
+                    className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 pl-12 pr-4 outline-none transition-all font-medium text-gray-900 disabled:opacity-70" 
+                  />
                 </div>
                 
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
                     <div className="relative flex-grow">
                       <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input value={customerStreet} onChange={e => setCustomerStreet(e.target.value)} type="text" placeholder="Số nhà, tên đường" className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 pl-12 pr-4 outline-none transition-all font-medium text-gray-900" />
+                      <input 
+                        value={customerStreet} 
+                        onChange={e => setCustomerStreet(e.target.value)} 
+                        type="text" 
+                        placeholder="Số nhà, tên đường" 
+                        disabled={addressType === 'profile' && profileInfo.street !== ''}
+                        className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 pl-12 pr-4 outline-none transition-all font-medium text-gray-900 disabled:opacity-70" 
+                      />
                     </div>
                     <span className="hidden sm:block text-[10px] font-bold text-gray-400 uppercase tracking-widest min-w-[100px] text-right">Số nhà, đường</span>
                   </div>
                   
                   <div className="flex items-center gap-4">
                     <div className="relative flex-grow pl-12 sm:pl-0">
-                      <input value={customerWard} onChange={e => setCustomerWard(e.target.value)} type="text" placeholder="Phường / Xã" className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 px-4 outline-none transition-all font-medium text-gray-900" />
+                      <input 
+                        value={customerWard} 
+                        onChange={e => setCustomerWard(e.target.value)} 
+                        type="text" 
+                        placeholder="Phường / Xã" 
+                        disabled={addressType === 'profile' && profileInfo.ward !== ''}
+                        className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 px-4 outline-none transition-all font-medium text-gray-900 disabled:opacity-70" 
+                      />
                     </div>
                     <span className="hidden sm:block text-[10px] font-bold text-gray-400 uppercase tracking-widest min-w-[100px] text-right">Phường / Xã</span>
                   </div>
 
                   <div className="flex items-center gap-4">
                     <div className="relative flex-grow pl-12 sm:pl-0">
-                      <input value={customerCity} onChange={e => setCustomerCity(e.target.value)} type="text" placeholder="Thành phố / Tỉnh" className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 px-4 outline-none transition-all font-medium text-gray-900" />
+                      <input 
+                        value={customerCity} 
+                        onChange={e => setCustomerCity(e.target.value)} 
+                        type="text" 
+                        placeholder="Thành phố / Tỉnh" 
+                        disabled={addressType === 'profile' && profileInfo.city !== ''}
+                        className="w-full bg-gray-50 border border-gray-200 focus:border-blue-500 focus:bg-white rounded-xl py-3 px-4 outline-none transition-all font-medium text-gray-900 disabled:opacity-70" 
+                      />
                     </div>
                     <span className="hidden sm:block text-[10px] font-bold text-gray-400 uppercase tracking-widest min-w-[100px] text-right">Thành phố / Tỉnh</span>
                   </div>
@@ -367,14 +484,14 @@ const Cart = () => {
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${shippingMethod === 'standard' ? 'border-blue-600' : 'border-gray-300'}`}>{shippingMethod === 'standard' && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}</div>
                       <div><p className={`font-bold ${shippingMethod === 'standard' ? 'text-gray-900' : 'text-gray-600'}`}>Giao hàng tiêu chuẩn</p><p className="text-xs text-gray-500 mt-1">Thời gian nhận: 2-3 ngày làm việc</p></div>
                     </div>
-                    <span className="font-bold text-gray-900 uppercase text-sm tracking-wide">50.000 ₫</span>
+                    <span className="font-bold text-gray-900 uppercase text-sm tracking-wide">30.000 ₫</span>
                   </div>
                   <div onClick={() => setShippingMethod('express')} className={`border-2 rounded-2xl p-4 cursor-pointer transition-all flex justify-between items-center ${shippingMethod === 'express' ? 'border-blue-600 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${shippingMethod === 'express' ? 'border-blue-600' : 'border-gray-300'}`}>{shippingMethod === 'express' && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />}</div>
                       <div><p className={`font-bold ${shippingMethod === 'express' ? 'text-gray-900' : 'text-gray-600'}`}>Giao hàng nhanh</p><p className="text-xs text-gray-500 mt-1">Thời gian nhận: Trong ngày</p></div>
                     </div>
-                    <span className="font-bold text-blue-600 uppercase text-sm tracking-wide">+5% Phí</span>
+                    <span className="font-bold text-blue-600 uppercase text-sm tracking-wide">60.000 ₫</span>
                   </div>
                 </div>
               </div>
@@ -409,7 +526,15 @@ const Cart = () => {
                         />
                         <span className="absolute -top-2 -right-2 bg-gray-900 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">{item.quantity}</span>
                       </div>
-                      <div className="flex-grow"><p className="text-xs font-bold text-gray-900 line-clamp-1 uppercase tracking-wide">{item.name}</p><p className="text-xs text-gray-500 mt-1">{formatPrice(item.price)}</p></div>
+                      <div className="flex-grow">
+                        <p className="text-xs font-bold text-gray-900 line-clamp-1 uppercase tracking-wide">{item.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs font-bold text-blue-600">{formatPrice(item.price)}</p>
+                          {item.originalPrice && item.originalPrice > item.price && (
+                            <p className="text-[10px] text-gray-400 line-through">{formatPrice(item.originalPrice)}</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
